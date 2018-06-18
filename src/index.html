@@ -4,11 +4,200 @@
   <meta charset="utf-8">
   <title>RIAapp</title>
   <base href="/">
-
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
   <app-root></app-root>
+  <div class="container" style="width: 80%">
+<h1 style="width: 60%;">Descarga Archivos de Drive</h1>
+
+<button class="btn btn-success" id="authorize-button" style="display: none;">Authorize</button>
+<button class="btn btn-danger" id="signout-button" style="display: none;">Sign Out</button>
+<br>
+
+
+
+<div class="jumbotron"  style="width: 50%;float: left; ">
+  <h4>Drive</h4>
+<div class ="container" id="content" ></div>
+</div>
+<div class="jumbotron" style="width:47%; float:right">
+  <h4>Descargado</h4>
+<div class ="container" id="downloaded" ></div>
+</div>
+</div>
+<script type="text/javascript">
+  var CLIENT_ID = '764072031411-bed79vhh81947943l7ckp70uipt6a70k.apps.googleusercontent.com';
+  var API_KEY = 'AIzaSyDEww9xCBR5CX4CBiejcFyATWr5qxzE0GI';
+
+  var DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
+
+  var SCOPES = 'https://www.googleapis.com/auth/drive.metadata.readonly';
+
+  var authorizeButton = document.getElementById('authorize-button');
+  var signoutButton = document.getElementById('signout-button');
+
+ 
+  function handleClientLoad() {
+    gapi.load('client:auth2', initClient);
+  }
+
+
+  function initClient() {
+    gapi.client.init({
+      apiKey: API_KEY,
+      clientId: CLIENT_ID,
+      discoveryDocs: DISCOVERY_DOCS,
+      scope: SCOPES
+    }).then(function () {
+      gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+
+      updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+      authorizeButton.onclick = handleAuthClick;
+      signoutButton.onclick = handleSignoutClick;
+    });
+  }
+
+ 
+  function updateSigninStatus(isSignedIn) {
+    if (isSignedIn) {
+      authorizeButton.style.display = 'none';
+      signoutButton.style.display = 'block';
+      listFiles();
+    } else {
+      authorizeButton.style.display = 'block';
+      signoutButton.style.display = 'none';
+    }
+  }
+
+ 
+  function handleAuthClick(event) {
+    gapi.auth2.getAuthInstance().signIn();
+  }
+
+  function handleSignoutClick(event) {
+    gapi.auth2.getAuthInstance().signOut();
+    document.getElementById("content").innerHTML = " ";
+    document.getElementById("downloaded").innerHTML = " ";
+  }
+
+ 
+  function appendPre(message) {
+    var pre = document.getElementById('content');
+    var textContent = document.createTextNode(message + '\n');
+    pre.appendChild(textContent);
+  }
+
+  function listFiles() {
+    
+    var div = document.getElementById("content");
+    div.innerHTML=" ";
+    gapi.client.drive.files.list({
+      'pageSize': 100,
+      'fields': "nextPageToken, files(id, name)"
+    }).then(function(response) {
+      var files = response.result.files;
+      if (files && files.length > 0) {
+        for (var i = 0; i < files.length; i++) {
+          var file = files[i];
+          var extension = file.name.split(".")[file.name.split(".").length - 1];
+          if (extension == file.name){
+
+          }else{
+          var Aelement = document.createElement("button");
+          Aelement.id = file.id;
+
+          
+          Aelement.setAttribute("descargar","getfile?name="+file.name+"&id="+file.id);
+          Aelement.setAttribute("aria-hidden","true");
+          Aelement.setAttribute("style", "width:100% ;  padding: 14px; text-align:left");
+          
+          Aelement.innerHTML = "   "+file.name ;         
+          div.appendChild(document.createElement("br"));
+          div.appendChild(Aelement);
+
+          
+
+          switch(extension){
+            case "jpg":
+            case "png":
+            case "jpeg":
+                Aelement.setAttribute("class","btn btn-default glyphicon glyphicon-picture");
+            break;
+            case "pdf":
+                Aelement.setAttribute("class","btn btn-default glyphicon glyphicon-bookmark");
+            break;
+            case "docx":
+            case "doc":
+            case "txt":
+                Aelement.setAttribute("class","btn btn-default glyphicon glyphicon-text-background");
+            break;
+            case "rar":
+            case "zip":
+                Aelement.setAttribute("class","btn btn-default glyphicon glyphicon-compressed");
+            break;
+            default:
+                Aelement.setAttribute("class","btn btn-default glyphicon glyphicon-save-file");
+            break;
+
+          }
+
+          Aelement.addEventListener("click", function(){
+            if (confirm("Confirma descarga?")){
+              
+              var div2 = document.getElementById("downloaded");
+              var Aelement2 = document.createElement("button");
+              Aelement2.id = file.id;
+              Aelement2.innerHTML = this.innerHTML;
+              Aelement2.setAttribute("class", this.getAttribute("class"));
+              Aelement2.setAttribute("style", this.getAttribute("style"));
+              
+              div2.appendChild(document.createElement("br"));
+              div2.appendChild(Aelement2);
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+              if(window.XMLHttpRequest) {
+                  peticion_http = new XMLHttpRequest();
+              }
+              else if(window.ActiveXObject) {
+                peticion_http = new ActiveXObject("Microsoft.XMLHTTP");
+              }
+                                
+              peticion_http.open('GET', "http://localhost:4200/"+this.getAttribute('descargar'), true);
+              peticion_http.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+              
+              peticion_http.send();
+              this.parentElement.removeChild(this);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            }
+          });
+        }
+      }
+      } else {
+        appendPre('No files found.');
+      }
+    });
+  }
+
+
+
+
+</script>
+
+<script async defer src="https://apis.google.com/js/api.js"
+  onload="this.onload=function(){};handleClientLoad()"
+  onreadystatechange="if (this.readyState === 'complete') this.onload()">
+</script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+<!-- jQuery library -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<!-- Latest compiled JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 </body>
 </html>
